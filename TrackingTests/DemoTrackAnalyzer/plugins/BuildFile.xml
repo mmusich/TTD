@@ -1,0 +1,11 @@
+<use name="FWCore/Framework"/>
+<use name="FWCore/PluginManager"/>
+<use name="FWCore/ParameterSet"/>
+<use name="TrackingTools/Records"/>
+<use name="TrackingTools/TransientTrackingRecHit"/>
+<use name="MagneticField/Engine"/>
+<use name="TrackingTools/TrajectoryState"/>
+<use name="TrackingTools/PatternTools"/>
+<flags EDM_PLUGIN="1"/>
+ <use name="DataFormats/TrackReco"/>
+ <use name="CommonTools/UtilAlgos"/>
