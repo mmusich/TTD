@@ -11,3 +11,8 @@
 *.lai
 *.la
 *.a
+
+# CMSSW files
+*.pyc
+__init__.py
+*~
