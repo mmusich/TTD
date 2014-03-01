@@ -32,6 +32,10 @@ process.clustToHits = cms.Sequence(
     process.siPixelRecHits*process.siStripMatchedRecHits
 )
 
+# Create MeasurementTrackerEvent
+
+process.load("RecoTracker.MeasurementDet.MeasurementTrackerEventProducer_cfi")
+
 ### Track Refitter
 process.load("RecoTracker.TrackProducer.TrackRefitters_cff")
 
@@ -45,7 +49,10 @@ process.TFileService = cms.Service("TFileService",
                                    )
 
 #process.p = cms.Path(process.clustToHits*process.TrackRefitter*process.demo)
-process.p = cms.Path(process.clustToHits*process.trackingGlobalReco*process.demo)
+process.p = cms.Path(process.clustToHits *
+                     process.MeasurementTrackerEvent *
+                     process.trackingGlobalReco *
+                     process.demo)
 
 process.MessageLogger.categories.extend(["GetManyWithoutRegistration","GetByLabelWithoutRegistration"])
 _messageSettings = cms.untracked.PSet(
