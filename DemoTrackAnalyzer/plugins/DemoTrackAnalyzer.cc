@@ -45,7 +45,6 @@ class DemoTrackAnalyzer : public edm::EDAnalyzer {
 
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
-
  private:
   float computeMinimumTrackDistance(reco::TrackCollection::const_iterator,
                                     reco::TrackCollection::const_iterator,
@@ -55,30 +54,28 @@ class DemoTrackAnalyzer : public edm::EDAnalyzer {
   virtual void endJob() override;
 
   virtual void beginRun(edm::Run const&, edm::EventSetup const&) override;
-  //virtual void endRun(edm::Run const&, edm::EventSetup const&) override;
-  //virtual void beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;
-  //virtual void endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;
 
   // ----------member data ---------------------------
-  edm::InputTag trackTags_; //used to select what tracks to read from configuration file
+  edm::InputTag trackTags_;  // used to select what tracks to read from
+                             // configuration file
   edm::EDGetTokenT<reco::TrackCollection> trackCollection_token_;
   edm::EDGetTokenT<reco::TrackCollection> tracks_token_;
   edm::EDGetTokenT<SiPixelRecHitCollection> pixelHits_token_;
   edm::EDGetTokenT<TrajectorySeedCollection> initialStepSeeds_token_;
   edm::EDGetTokenT<TrajTrackAssociationCollection> trajTrackAssociation_token_;
 
-  TH1I * h_crossed;
-  TH1I * h_missed;
-  TH1I * h_hit_pixel_layers;
-  TH1F * histo;
-  TH1F * h_track_pt;
-  TH1F * h_seed_pt;
-  TH1F * h_eta_initialstep_seeds;
-  TH1F * h_tob_xpull;
-  TH2F * h_hit_map;
-  TH2F * h_hit_pixelbarrel_map;
-  std::string builderName;
-  const TransientTrackingRecHitBuilder* builder;
+  TH1I* h_crossed_;
+  TH1I* h_missed_;
+  TH1I* h_hit_pixel_layers_;
+  TH1F* h_charge_;
+  TH1F* h_track_pt_;
+  TH1F* h_seed_pt_;
+  TH1F* h_eta_initialstep_seeds_;
+  TH1F* h_tob_xpull_;
+  TH2F* h_hit_map_;
+  TH2F* h_hit_pixelbarrel_map_;
+  std::string builder_name_;
+  const TransientTrackingRecHitBuilder* builder_;
 };
 
 //
@@ -93,30 +90,23 @@ class DemoTrackAnalyzer : public edm::EDAnalyzer {
 // constructors and destructor
 //
 DemoTrackAnalyzer::DemoTrackAnalyzer(const edm::ParameterSet& iConfig)
-    :trackTags_(iConfig.getUntrackedParameter<edm::InputTag>("tracks")),
-     builderName(iConfig.getParameter<std::string>("TTRHBuilder"))
-{
-  //now do what ever initialization is needed
+    : trackTags_(iConfig.getUntrackedParameter<edm::InputTag>("tracks")),
+      builder_name_(iConfig.getParameter<std::string>("TTRHBuilder")) {
   edm::Service<TFileService> fs;
-  histo      = fs->make<TH1F>("charge", "Charges", 200, -2., 2.);
-  h_track_pt = fs->make<TH1F>("Track_Pt", "Track_Pt", 200, 0., 100.);
-  h_seed_pt  = fs->make<TH1F>("Seed_Pt", "Seed_Pt", 200, 0., 100.);
-  h_crossed  = fs->make<TH1I>("CrossedLayers", "CrossedLayers", 50, 0., 50.);
-  h_missed   = fs->make<TH1I>("MissedLayers", "MissedLayers", 50, 0., 50.);
-  h_hit_map  = fs->make<TH2F>("Hit_map", "Hit_map",
-                             1200, -300., 300.,
-                             280, 0., 140. );
-  h_hit_pixelbarrel_map  = fs->make<TH2F>("Hit_pixelbarrel", "Hit_pixelbarrel",
-                                          240, -12., 12.,
-                                          240, -12., 12. );
-  h_hit_pixel_layers = fs->make<TH1I>("Hits_pixellayers", "Hits_pixellayers",
-                                      5, 1, 6);
-  h_eta_initialstep_seeds = fs->make<TH1F>("InitialSeed_Eta",
-                                           "InitialSeed_Eta",
-                                           70, -3.5, 3.5);
-  h_tob_xpull = fs->make<TH1F>("TOB_Pull_x",
-                               "TOB_Pull_x",
-                               100, -5., 5.);
+  h_charge_ = fs->make<TH1F>("charge", "Charges", 200, -2., 2.);
+  h_track_pt_ = fs->make<TH1F>("Track_Pt", "Track_Pt", 200, 0., 100.);
+  h_seed_pt_ = fs->make<TH1F>("Seed_Pt", "Seed_Pt", 200, 0., 100.);
+  h_crossed_ = fs->make<TH1I>("CrossedLayers", "CrossedLayers", 50, 0., 50.);
+  h_missed_ = fs->make<TH1I>("MissedLayers", "MissedLayers", 50, 0., 50.);
+  h_hit_map_ =
+      fs->make<TH2F>("Hit_map", "Hit_map", 1200, -300., 300., 280, 0., 140.);
+  h_hit_pixelbarrel_map_ = fs->make<TH2F>("Hit_pixelbarrel", "Hit_pixelbarrel",
+                                          240, -12., 12., 240, -12., 12.);
+  h_hit_pixel_layers_ =
+      fs->make<TH1I>("Hits_pixellayers", "Hits_pixellayers", 5, 1, 6);
+  h_eta_initialstep_seeds_ =
+      fs->make<TH1F>("InitialSeed_Eta", "InitialSeed_Eta", 70, -3.5, 3.5);
+  h_tob_xpull_ = fs->make<TH1F>("TOB_Pull_x", "TOB_Pull_x", 100, -5., 5.);
 
   // Declare what we need to consume.
   using namespace edm;
@@ -124,51 +114,42 @@ DemoTrackAnalyzer::DemoTrackAnalyzer(const edm::ParameterSet& iConfig)
 
   trackCollection_token_ = consumes<TrackCollection>(trackTags_);
   tracks_token_ = consumes<TrackCollection>(trackTags_);
-  pixelHits_token_ = consumes<SiPixelRecHitCollection>(edm::InputTag("siPixelRecHits"));
-  initialStepSeeds_token_ = consumes<TrajectorySeedCollection>(edm::InputTag("initialStepSeeds"));
-  trajTrackAssociation_token_ = consumes<TrajTrackAssociationCollection>(trackTags_);
+  pixelHits_token_ =
+      consumes<SiPixelRecHitCollection>(edm::InputTag("siPixelRecHits"));
+  initialStepSeeds_token_ =
+      consumes<TrajectorySeedCollection>(edm::InputTag("initialStepSeeds"));
+  trajTrackAssociation_token_ =
+      consumes<TrajTrackAssociationCollection>(trackTags_);
 }
 
-
-DemoTrackAnalyzer::~DemoTrackAnalyzer()
-{
+DemoTrackAnalyzer::~DemoTrackAnalyzer() {
   // do anything here that needs to be done at desctruction time
   // (e.g. close files, deallocate resources etc.)
-
 }
-
 
 //
 // member functions
 //
 
-float DemoTrackAnalyzer::computeMinimumTrackDistance(reco::TrackCollection::const_iterator trk1,
-                                                     reco::TrackCollection::const_iterator trk2,
-                                                      const MagneticField* theMagField)
-{
-  GlobalPoint position1(trk1->vertex().x(),
-                        trk1->vertex().y(),
+float DemoTrackAnalyzer::computeMinimumTrackDistance(
+    reco::TrackCollection::const_iterator trk1,
+    reco::TrackCollection::const_iterator trk2,
+    const MagneticField* theMagField) {
+  GlobalPoint position1(trk1->vertex().x(), trk1->vertex().y(),
                         trk1->vertex().z());
 
-  GlobalVector momentum1(trk1->momentum().x(),
-                         trk1->momentum().y(),
+  GlobalVector momentum1(trk1->momentum().x(), trk1->momentum().y(),
                          trk1->momentum().z());
 
-  GlobalTrajectoryParameters gtp1(position1,
-                                  momentum1,
-                                  trk1->charge(),
+  GlobalTrajectoryParameters gtp1(position1, momentum1, trk1->charge(),
                                   theMagField);
-  GlobalPoint position2(trk2->vertex().x(),
-                        trk2->vertex().y(),
+  GlobalPoint position2(trk2->vertex().x(), trk2->vertex().y(),
                         trk2->vertex().z());
 
-  GlobalVector momentum2(trk2->momentum().x(),
-                         trk2->momentum().y(),
+  GlobalVector momentum2(trk2->momentum().x(), trk2->momentum().y(),
                          trk2->momentum().z());
 
-  GlobalTrajectoryParameters gtp2(position2,
-                                  momentum2,
-                                  trk2->charge(),
+  GlobalTrajectoryParameters gtp2(position2, momentum2, trk2->charge(),
                                   theMagField);
 
   TwoTrackMinimumDistance two_track_min_distance;
@@ -178,17 +159,14 @@ float DemoTrackAnalyzer::computeMinimumTrackDistance(reco::TrackCollection::cons
   return -1.0;
 }
 
-
-
 // ------------ method called for each event  ------------
-void
-DemoTrackAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
-{
+void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
+                                const edm::EventSetup& iSetup) {
   using namespace edm;
   using reco::TrackCollection;
 
-  ESHandle< MagneticField > magneticField;
-  iSetup.get< IdealMagneticFieldRecord >().get( magneticField );
+  ESHandle<MagneticField> magneticField;
+  iSetup.get<IdealMagneticFieldRecord>().get(magneticField);
 
   Handle<TrackCollection> tracks;
   iEvent.getByToken(tracks_token_, tracks);
@@ -207,30 +185,30 @@ DemoTrackAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
   TrackCollection::const_iterator trk1 = tracks->begin();
   TrackCollection::const_iterator trk2 = tracks->begin();
   for (TrackCollection::const_iterator itTrack = tracks->begin();
-      itTrack != tracks->end();
-      ++itTrack, ++tji) {
+       itTrack != tracks->end(); ++itTrack, ++tji) {
     int charge = 0;
     charge = itTrack->charge();
-    histo->Fill( charge );
-    h_track_pt->Fill(itTrack->pt());
+    h_charge_->Fill(charge);
+    h_track_pt_->Fill(itTrack->pt());
     // hit pattern of the track
     const reco::HitPattern& p = itTrack->hitPattern();
-    h_crossed->Fill(p.trackerLayersWithMeasurement());
-    h_missed->Fill(p.numberOfHits(reco::HitPattern::MISSING_OUTER_HITS));
+    h_crossed_->Fill(p.trackerLayersWithMeasurement());
+    h_missed_->Fill(p.numberOfHits(reco::HitPattern::MISSING_OUTER_HITS));
     auto bi = itTrack->recHitsBegin();
     auto be = itTrack->recHitsEnd();
     for (; bi != be; ++bi) {
-      TransientTrackingRecHit::RecHitPointer thit = builder->build(&**bi);
+      TransientTrackingRecHit::RecHitPointer thit = builder_->build(&**bi);
       if (thit->isValid())
-        h_hit_map->Fill(thit->globalPosition().z(), thit->globalPosition().perp());
+        h_hit_map_->Fill(thit->globalPosition().z(),
+                         thit->globalPosition().perp());
     }
     edm::RefToBase<TrajectorySeed> tkseed = itTrack->seedRef();
     if (tkseed->nHits() == 3) {
       TransientTrackingRecHit::RecHitPointer recHit =
-          builder->build(&*(tkseed->recHits().first+2));
+          builder_->build(&*(tkseed->recHits().first + 2));
       TrajectoryStateOnSurface state = trajectoryStateTransform::transientState(
           tkseed->startingState(), recHit->surface(), magneticField.product());
-      h_seed_pt->Fill(state.globalMomentum().perp());
+      h_seed_pt_->Fill(state.globalMomentum().perp());
     }
     Ref<std::vector<Trajectory> > traj = tji->key;
     std::vector<TrajectoryMeasurement> trajMeas = traj->measurements();
@@ -239,32 +217,31 @@ DemoTrackAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
     for (; tjmi != tjme; ++tjmi) {
       TransientTrackingRecHit::ConstRecHitPointer hit = tjmi->recHit();
       DetId hitId = hit->geographicalId();
-      if (hit->isValid() && hitId.subdetId() == (int) StripSubdetector::TOB) {
+      if (hit->isValid() && hitId.subdetId() == (int)StripSubdetector::TOB) {
         TrajectoryStateOnSurface fwdState = tjmi->forwardPredictedState();
         float delta = hit->localPosition().x() - fwdState.localPosition().x();
-        float err2 = hit->localPositionError().xx()
-            + fwdState.localError().positionError().xx();
-        if (err2)
-          h_tob_xpull->Fill(delta/sqrt(err2));
+        float err2 = hit->localPositionError().xx() +
+                     fwdState.localError().positionError().xx();
+        if (err2) h_tob_xpull_->Fill(delta / sqrt(err2));
       }
     }
     // Two track minimum distance
     if (itTrack != trk1 && trk2 == trk1) {
       trk2 = itTrack;
       std::cout << "Minimum distance between the first two tracks is: "
-          << computeMinimumTrackDistance(trk1, trk2, magneticField.product())
-          << std::endl;
+                << computeMinimumTrackDistance(
+                       trk1, trk2, magneticField.product()) << std::endl;
     }
-  } //  Loop over tracks (and associated trajectories)
+  }  //  Loop over tracks (and associated trajectories)
 
   auto si = initialStepSeeds->begin();
   auto se = initialStepSeeds->end();
   for (; si != se; ++si) {
     TransientTrackingRecHit::RecHitPointer recHit =
-        builder->build(&*(si->recHits().first+2));
+        builder_->build(&*(si->recHits().first + 2));
     TrajectoryStateOnSurface state = trajectoryStateTransform::transientState(
         si->startingState(), recHit->surface(), magneticField.product());
-    h_eta_initialstep_seeds->Fill(state.globalMomentum().eta());
+    h_eta_initialstep_seeds_->Fill(state.globalMomentum().eta());
   }
 
   // Loop over all pixel hits
@@ -275,84 +252,57 @@ DemoTrackAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
     auto ppi = pi->begin();
     auto ppe = pi->end();
     for (; ppi != ppe; ++ppi) {
-      TransientTrackingRecHit::RecHitPointer ttrh = builder->build(&*ppi);
+      TransientTrackingRecHit::RecHitPointer ttrh = builder_->build(&*ppi);
       if (ttrh->isValid()) {
-        if (hitId.subdetId() == (int) PixelSubdetector::PixelBarrel) {
-          h_hit_pixelbarrel_map->Fill(ttrh->globalPosition().x(), ttrh->globalPosition().y());
-          h_hit_pixel_layers->Fill(PXBDetId(hitId).layer());
+        if (hitId.subdetId() == (int)PixelSubdetector::PixelBarrel) {
+          h_hit_pixelbarrel_map_->Fill(ttrh->globalPosition().x(),
+                                       ttrh->globalPosition().y());
+          h_hit_pixel_layers_->Fill(PXBDetId(hitId).layer());
         } else {
-          h_hit_pixel_layers->Fill(3 + PXFDetId(hitId).disk());
+          h_hit_pixel_layers_->Fill(3 + PXFDetId(hitId).disk());
         }
       }
     }
   }
 }
 
+// ------------ method called once each job just before starting event loop
+// ------------
+void DemoTrackAnalyzer::beginJob() {}
 
-// ------------ method called once each job just before starting event loop  ------------
-void
-DemoTrackAnalyzer::beginJob()
-{
-}
-
-// ------------ method called once each job just after ending the event loop  ------------
-void
-DemoTrackAnalyzer::endJob()
-{
-}
+// ------------ method called once each job just after ending the event loop
+// ------------
+void DemoTrackAnalyzer::endJob() {}
 
 // ------------ method called when starting to processes a run  ------------
 
-void
-DemoTrackAnalyzer::beginRun(edm::Run const &run, edm::EventSetup const &setup)
-{
+void DemoTrackAnalyzer::beginRun(edm::Run const& run,
+                                 edm::EventSetup const& setup) {
   edm::ESHandle<TransientTrackingRecHitBuilder> theBuilder;
-  setup.get<TransientRecHitRecord>().get(builderName, theBuilder);
-  builder = theBuilder.product();
+  setup.get<TransientRecHitRecord>().get(builder_name_, theBuilder);
+  builder_ = theBuilder.product();
 }
 
-
-// ------------ method called when ending the processing of a run  ------------
-/*
-  void
-  DemoTrackAnalyzer::endRun(edm::Run const&, edm::EventSetup const&)
-  {
-  }
-*/
-
-// ------------ method called when starting to processes a luminosity block  ------------
-/*
-  void
-  DemoTrackAnalyzer::beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&)
-  {
-  }
-*/
-
-// ------------ method called when ending the processing of a luminosity block  ------------
-/*
-  void
-  DemoTrackAnalyzer::endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&)
-  {
-  }
-*/
-
-// ------------ method fills 'descriptions' with the allowed parameters for the module  ------------
-void
-DemoTrackAnalyzer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
-  //The following says we do not know what parameters are allowed so do no validation
-  // Please change this to state exactly what you do use, even if it is no parameters
+// ------------ method fills 'descriptions' with the allowed parameters for the
+// module  ------------
+void DemoTrackAnalyzer::fillDescriptions(
+    edm::ConfigurationDescriptions& descriptions) {
+  // The following says we do not know what parameters are allowed so do no
+  // validation
+  // Please change this to state exactly what you do use, even if it is no
+  // parameters
   edm::ParameterSetDescription desc;
   desc.setUnknown();
   descriptions.addDefault(desc);
 
-  //Specify that only 'tracks' is allowed
-  //To use, remove the default given above and uncomment below
-  //ParameterSetDescription desc;
-  //desc.addUntracked<edm::InputTag>("tracks","ctfWithMaterialTracks");
-  //descriptions.addDefault(desc);
+  // Specify that only 'tracks' is allowed
+  // To use, remove the default given above and uncomment below
+  // ParameterSetDescription desc;
+  // desc.addUntracked<edm::InputTag>("tracks","ctfWithMaterialTracks");
+  // descriptions.addDefault(desc);
 }
 
-//define this as a plug-in
+// define this as a plug-in
 DEFINE_FWK_MODULE(DemoTrackAnalyzer);
 
 // Local Variables:

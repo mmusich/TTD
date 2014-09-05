@@ -29,11 +29,11 @@ process.source = cms.Source("PoolSource",
 
 # need to recreate hits from clusters (which are stored in RECO)
 process.clustToHits = cms.Sequence(
-    process.siPixelRecHits*process.siStripMatchedRecHits
+    process.siPixelRecHits
+    *process.siStripMatchedRecHits
 )
 
-# Create MeasurementTrackerEvent
-
+# This is needed for tracking to work properly
 process.load("RecoTracker.MeasurementDet.MeasurementTrackerEventProducer_cfi")
 
 ### Track Refitter
@@ -48,7 +48,6 @@ process.TFileService = cms.Service("TFileService",
                                    fileName = cms.string('histo.root')
                                    )
 
-#process.p = cms.Path(process.clustToHits*process.TrackRefitter*process.demo)
 process.p = cms.Path(process.clustToHits *
                      process.MeasurementTrackerEvent *
                      process.trackingGlobalReco *
