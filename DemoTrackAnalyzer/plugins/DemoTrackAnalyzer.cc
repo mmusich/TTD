@@ -109,15 +109,15 @@ DemoTrackAnalyzer::DemoTrackAnalyzer(const edm::ParameterSet& iConfig)
   h_tob_xpull_ = fs->make<TH1F>("TOB_Pull_x", "TOB_Pull_x", 100, -5., 5.);
 
   // Declare what we need to consume.
-  using namespace edm;
+  using edm::InputTag;
   using reco::TrackCollection;
 
   trackCollection_token_ = consumes<TrackCollection>(trackTags_);
   tracks_token_ = consumes<TrackCollection>(trackTags_);
   pixelHits_token_ =
-      consumes<SiPixelRecHitCollection>(edm::InputTag("siPixelRecHits"));
+      consumes<SiPixelRecHitCollection>(InputTag("siPixelRecHits"));
   initialStepSeeds_token_ =
-      consumes<TrajectorySeedCollection>(edm::InputTag("initialStepSeeds"));
+      consumes<TrajectorySeedCollection>(InputTag("initialStepSeeds"));
   trajTrackAssociation_token_ =
       consumes<TrajTrackAssociationCollection>(trackTags_);
 }
@@ -162,7 +162,10 @@ float DemoTrackAnalyzer::computeMinimumTrackDistance(
 // ------------ method called for each event  ------------
 void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
                                 const edm::EventSetup& iSetup) {
-  using namespace edm;
+  //  use strictly needed namespaces
+  using edm::Handle;
+  using edm::ESHandle;
+  using edm::Ref;
   using reco::TrackCollection;
 
   ESHandle<MagneticField> magneticField;
