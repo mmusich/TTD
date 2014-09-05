@@ -46,8 +46,7 @@ class DemoTrackAnalyzer : public edm::EDAnalyzer {
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
  private:
-  float computeMinimumTrackDistance(reco::TrackCollection::const_iterator,
-                                    reco::TrackCollection::const_iterator,
+  float computeMinimumTrackDistance(reco::Track const&, reco::Track const&,
                                     const MagneticField*);
   virtual void beginJob() override;
   virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
@@ -132,24 +131,23 @@ DemoTrackAnalyzer::~DemoTrackAnalyzer() {
 //
 
 float DemoTrackAnalyzer::computeMinimumTrackDistance(
-    reco::TrackCollection::const_iterator trk1,
-    reco::TrackCollection::const_iterator trk2,
+    reco::Track const& trk1, reco::Track const& trk2,
     const MagneticField* theMagField) {
-  GlobalPoint position1(trk1->vertex().x(), trk1->vertex().y(),
-                        trk1->vertex().z());
+  GlobalPoint position1(trk1.vertex().x(), trk1.vertex().y(),
+                        trk1.vertex().z());
 
-  GlobalVector momentum1(trk1->momentum().x(), trk1->momentum().y(),
-                         trk1->momentum().z());
+  GlobalVector momentum1(trk1.momentum().x(), trk1.momentum().y(),
+                         trk1.momentum().z());
 
-  GlobalTrajectoryParameters gtp1(position1, momentum1, trk1->charge(),
+  GlobalTrajectoryParameters gtp1(position1, momentum1, trk1.charge(),
                                   theMagField);
-  GlobalPoint position2(trk2->vertex().x(), trk2->vertex().y(),
-                        trk2->vertex().z());
+  GlobalPoint position2(trk2.vertex().x(), trk2.vertex().y(),
+                        trk2.vertex().z());
 
-  GlobalVector momentum2(trk2->momentum().x(), trk2->momentum().y(),
-                         trk2->momentum().z());
+  GlobalVector momentum2(trk2.momentum().x(), trk2.momentum().y(),
+                         trk2.momentum().z());
 
-  GlobalTrajectoryParameters gtp2(position2, momentum2, trk2->charge(),
+  GlobalTrajectoryParameters gtp2(position2, momentum2, trk2.charge(),
                                   theMagField);
 
   TwoTrackMinimumDistance two_track_min_distance;
@@ -185,27 +183,27 @@ void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
 
   auto tji = trajTrackAssociation->begin();
 
-  TrackCollection::const_iterator trk1 = tracks->begin();
-  TrackCollection::const_iterator trk2 = tracks->begin();
-  for (TrackCollection::const_iterator itTrack = tracks->begin();
-       itTrack != tracks->end(); ++itTrack, ++tji) {
-    int charge = 0;
-    charge = itTrack->charge();
-    h_charge_->Fill(charge);
-    h_track_pt_->Fill(itTrack->pt());
+  reco::Track const& trk1 = *tracks->begin();
+  bool do_two_tracks_min_distance = true;
+  // auto --> "reco::Track"
+  for (auto const& itTrack : *tracks) {
+    h_charge_->Fill(itTrack.charge());
+    h_track_pt_->Fill(itTrack.pt());
     // hit pattern of the track
-    const reco::HitPattern& p = itTrack->hitPattern();
+    const reco::HitPattern& p = itTrack.hitPattern();
     h_crossed_->Fill(p.trackerLayersWithMeasurement());
     h_missed_->Fill(p.numberOfHits(reco::HitPattern::MISSING_OUTER_HITS));
-    auto bi = itTrack->recHitsBegin();
-    auto be = itTrack->recHitsEnd();
+    auto bi = itTrack.recHitsBegin();
+    auto be = itTrack.recHitsEnd();
     for (; bi != be; ++bi) {
       TransientTrackingRecHit::RecHitPointer thit = builder_->build(&**bi);
       if (thit->isValid())
         h_hit_map_->Fill(thit->globalPosition().z(),
                          thit->globalPosition().perp());
     }
-    edm::RefToBase<TrajectorySeed> tkseed = itTrack->seedRef();
+
+    // auto --> edm::RefToBase<TrajectorySeed>
+    auto tkseed = itTrack.seedRef();
     if (tkseed->nHits() == 3) {
       TransientTrackingRecHit::RecHitPointer recHit =
           builder_->build(&*(tkseed->recHits().first + 2));
@@ -215,13 +213,12 @@ void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
     }
     Ref<std::vector<Trajectory> > traj = tji->key;
     std::vector<TrajectoryMeasurement> trajMeas = traj->measurements();
-    auto tjmi = trajMeas.begin();
-    auto tjme = trajMeas.end();
-    for (; tjmi != tjme; ++tjmi) {
-      TransientTrackingRecHit::ConstRecHitPointer hit = tjmi->recHit();
+    for (auto const& measurement : traj->measurements()) {
+      TransientTrackingRecHit::ConstRecHitPointer hit = measurement.recHit();
       DetId hitId = hit->geographicalId();
-      if (hit->isValid() && hitId.subdetId() == (int)StripSubdetector::TOB) {
-        TrajectoryStateOnSurface fwdState = tjmi->forwardPredictedState();
+      if (hit->isValid() &&
+          hitId.subdetId() == static_cast<int>(StripSubdetector::TOB)) {
+        TrajectoryStateOnSurface fwdState = measurement.forwardPredictedState();
         float delta = hit->localPosition().x() - fwdState.localPosition().x();
         float err2 = hit->localPositionError().xx() +
                      fwdState.localError().positionError().xx();
@@ -229,35 +226,36 @@ void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
       }
     }
     // Two track minimum distance
-    if (itTrack != trk1 && trk2 == trk1) {
-      trk2 = itTrack;
+    if (&itTrack != &trk1 && do_two_tracks_min_distance) {
+      do_two_tracks_min_distance = false;
+      auto trk2 = itTrack;
       std::cout << "Minimum distance between the first two tracks is: "
                 << computeMinimumTrackDistance(
                        trk1, trk2, magneticField.product()) << std::endl;
     }
   }  //  Loop over tracks (and associated trajectories)
 
-  auto si = initialStepSeeds->begin();
-  auto se = initialStepSeeds->end();
-  for (; si != se; ++si) {
+  // auto si = initialStepSeeds->begin();
+  // auto se = initialStepSeeds->end();
+  for (auto const& a_seed : *initialStepSeeds) {
+    // for (; si != se; ++si) {
     TransientTrackingRecHit::RecHitPointer recHit =
-        builder_->build(&*(si->recHits().first + 2));
+        builder_->build(&*(a_seed.recHits().first + 2));
     TrajectoryStateOnSurface state = trajectoryStateTransform::transientState(
-        si->startingState(), recHit->surface(), magneticField.product());
+        a_seed.startingState(), recHit->surface(), magneticField.product());
     h_eta_initialstep_seeds_->Fill(state.globalMomentum().eta());
   }
 
   // Loop over all pixel hits
-  auto pi = pixelHits->begin();
-  auto pe = pixelHits->end();
-  for (; pi != pe; ++pi) {
-    DetId hitId = pi->detId();
-    auto ppi = pi->begin();
-    auto ppe = pi->end();
-    for (; ppi != ppe; ++ppi) {
-      TransientTrackingRecHit::RecHitPointer ttrh = builder_->build(&*ppi);
+  // auto --> edmNew::DetSetVector<SiPixelRecHit>
+  for (auto const& pixel_rechit_per_detid : *pixelHits) {
+    DetId hitId = pixel_rechit_per_detid.detId();
+    for (auto const& a_pixel_rechit : pixel_rechit_per_detid) {
+      TransientTrackingRecHit::RecHitPointer ttrh =
+          builder_->build(&a_pixel_rechit);
       if (ttrh->isValid()) {
-        if (hitId.subdetId() == (int)PixelSubdetector::PixelBarrel) {
+        if (hitId.subdetId() ==
+            static_cast<int>(PixelSubdetector::PixelBarrel)) {
           h_hit_pixelbarrel_map_->Fill(ttrh->globalPosition().x(),
                                        ttrh->globalPosition().y());
           h_hit_pixel_layers_->Fill(PXBDetId(hitId).layer());
