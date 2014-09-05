@@ -48,6 +48,7 @@ process.tracking = cms.Sequence(
     + process.trackingGlobalReco
 )
 
+
 ### define output EDMFile
 MyReRecoEventContent = cms.PSet(
     outputCommands = cms.untracked.vstring(
@@ -78,6 +79,20 @@ process.options = cms.untracked.PSet(wantSummary = cms.untracked.bool(True))
 process.SimpleMemoryCheck=cms.Service("SimpleMemoryCheck",
                                       ignoreTotal=cms.untracked.int32(1),
                                       oncePerEventMode=cms.untracked.bool(False))
+
+### CUSTOMIZATION FUNCTIONS TO BE USED ###
+
+# CUSTOMIZE LAYERS USED TO PRODUCE SEEDS IN THE INITIAL_STEP
+def customize_initialStepSeeds(process):
+    process.initialStepSeedLayers.layerList.remove('BPix1+BPix2+BPix3')
+    process.out.fileName = cms.untracked.string('reco_trk_mod.root')
+    return process
+
+### INVOKE APPROPRIATE CUSTOMIZATION FUNCTION(S) ###
+
+process = customize_initialStepSeeds(process)
+
+
 
 # Local Variables:
 # truncate-lines: t
