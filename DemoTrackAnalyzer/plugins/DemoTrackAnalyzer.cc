@@ -216,7 +216,7 @@ DemoTrackAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
     // hit pattern of the track
     const reco::HitPattern& p = itTrack->hitPattern();
     h_crossed->Fill(p.trackerLayersWithMeasurement());
-    h_missed->Fill(itTrack->trackerExpectedHitsOuter().numberOfHits());
+    h_missed->Fill(p.numberOfHits(reco::HitPattern::MISSING_OUTER_HITS));
     auto bi = itTrack->recHitsBegin();
     auto be = itTrack->recHitsEnd();
     for (; bi != be; ++bi) {
