@@ -175,13 +175,17 @@ void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
   Handle<SiPixelRecHitCollection> pixelHits;
   iEvent.getByToken(pixelHits_token_, pixelHits);
 
+#ifdef USE_SEEDS
   Handle<TrajectorySeedCollection> initialStepSeeds;
   iEvent.getByToken(initialStepSeeds_token_, initialStepSeeds);
+#endif
 
+#ifdef USE_TRAJ
   Handle<TrajTrackAssociationCollection> trajTrackAssociation;
   iEvent.getByToken(trajTrackAssociation_token_, trajTrackAssociation);
 
   auto tji = trajTrackAssociation->begin();
+#endif
 
   reco::Track const& trk1 = *tracks->begin();
   bool do_two_tracks_min_distance = true;
@@ -201,8 +205,17 @@ void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
         h_hit_map_->Fill(thit->globalPosition().z(),
                          thit->globalPosition().perp());
     }
+    // Two track minimum distance
+    if (&itTrack != &trk1 && do_two_tracks_min_distance) {
+      do_two_tracks_min_distance = false;
+      auto trk2 = itTrack;
+      std::cout << "Minimum distance between the first two tracks is: "
+                << computeMinimumTrackDistance(
+                       trk1, trk2, magneticField.product()) << std::endl;
+    }
 
     // auto --> edm::RefToBase<TrajectorySeed>
+#ifdef USE_SEEDS
     auto tkseed = itTrack.seedRef();
     if (tkseed->nHits() == 3) {
       TransientTrackingRecHit::RecHitPointer recHit =
@@ -211,6 +224,8 @@ void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
           tkseed->startingState(), recHit->surface(), magneticField.product());
       h_seed_pt_->Fill(state.globalMomentum().perp());
     }
+#endif
+#ifdef USE_TRAJ
     Ref<std::vector<Trajectory> > traj = tji->key;
     std::vector<TrajectoryMeasurement> trajMeas = traj->measurements();
     for (auto const& measurement : traj->measurements()) {
@@ -225,16 +240,10 @@ void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
         if (err2) h_tob_xpull_->Fill(delta / sqrt(err2));
       }
     }
-    // Two track minimum distance
-    if (&itTrack != &trk1 && do_two_tracks_min_distance) {
-      do_two_tracks_min_distance = false;
-      auto trk2 = itTrack;
-      std::cout << "Minimum distance between the first two tracks is: "
-                << computeMinimumTrackDistance(
-                       trk1, trk2, magneticField.product()) << std::endl;
-    }
+#endif
   }  //  Loop over tracks (and associated trajectories)
 
+#ifdef USE_SEEDS
   // auto si = initialStepSeeds->begin();
   // auto se = initialStepSeeds->end();
   for (auto const& a_seed : *initialStepSeeds) {
@@ -245,6 +254,7 @@ void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
         a_seed.startingState(), recHit->surface(), magneticField.product());
     h_eta_initialstep_seeds_->Fill(state.globalMomentum().eta());
   }
+#endif
 
   // Loop over all pixel hits
   // auto --> edmNew::DetSetVector<SiPixelRecHit>
