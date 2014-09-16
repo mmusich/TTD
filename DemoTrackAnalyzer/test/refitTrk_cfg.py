@@ -1,7 +1,7 @@
 import FWCore.ParameterSet.Config as cms
 
 # inspired from RecoTracker/TrackProducer/test/TrackRefit.py
- 
+
 process = cms.Process("Refitting")
 
 ### standard MessageLoggerConfiguration
@@ -29,11 +29,11 @@ process.load("RecoTracker.TrackProducer.TrackRefitters_cff")
 
 process.source = cms.Source("PoolSource",
     fileNames = cms.untracked.vstring('file:reco_trk.root')
-) 
+)
 process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(100))
 
 process.out = cms.OutputModule("PoolOutputModule",
-                               outputCommands = cms.untracked.vstring('drop *_*_*_*', 
+                               outputCommands = cms.untracked.vstring('drop *_*_*_*',
                                                                       'keep recoTracks_*_*_*',
                                                                       'keep recoTrackExtras_*_*_*',
                                                                       'keep TrackingRecHitsOwned_*_*_*'),
