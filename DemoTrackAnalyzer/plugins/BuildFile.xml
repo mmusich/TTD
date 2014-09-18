@@ -6,6 +6,8 @@
 <use name="MagneticField/Engine"/>
 <use name="TrackingTools/TrajectoryState"/>
 <use name="TrackingTools/PatternTools"/>
+<use name="DataFormats/TrackReco"/>
+<use name="DataFormats/TrackerCommon"/>
+<use name="Geometry/TrackerGeometryBuilder"/>
+<use name="CommonTools/UtilAlgos"/>
 <flags EDM_PLUGIN="1"/>
- <use name="DataFormats/TrackReco"/>
- <use name="CommonTools/UtilAlgos"/>

@@ -68,6 +68,41 @@ _messageSettings = cms.untracked.PSet(
 process.MessageLogger.cerr.GetManyWithoutRegistration = _messageSettings
 process.MessageLogger.cerr.GetByLabelWithoutRegistration = _messageSettings
 
+def customizeSelectHPTracks(process):
+    process.selectedTracks = cms.EDFilter("TrackSelector",
+                                          src = cms.InputTag("TrackRefitter"),
+                                          cut = cms.string("quality('highPurity') & (algo = 4) & abs(eta) < 0.9")
+                                          )
+    process.demo.tracks = cms.untracked.InputTag("selectedTracks")
+    # Now run the filter that produces the input collection for our
+    # demo analyzer before the demo itself.
+    process.p.insert(process.p.index(process.demo), process.selectedTracks)
+    return process
+
+def customizeForSeeds(process):
+    if not process.p.replace(process.TrackRefitter, process.trackingGlobalReco):
+        raise Exception("Cannot customize process to run full reco instead of refit.")
+    # Add also siPixelClusterShapeCache that is needed by the full tracking.
+    process.load("RecoPixelVertexing.PixelLowPtUtilities.siPixelClusterShapeCache_cfi")
+    process.p.insert(process.p.index(process.trackingGlobalReco), process.siPixelClusterShapeCache)
+
+    # Check if we have been called after the customizeSelectHPTracks
+    # has been called: if so, change the input collection of the
+    # filter, otherwise change the input collection of the
+    # DemoTrackAnalyzer module directly.
+    if getattr(process, "selectedTracks", None):
+        process.selectedTracks.src = cms.untracked.InputTag("generalTracks")
+    else:
+        process.demo.tracks = cms.untracked.InputTag("generalTracks")
+
+    return process
+
+### CUSTOMIZE PROCESS
+
+#process = customizeSelectHPTracks(process)
+process = customizeForSeeds(process)
+
+
 # Local Variables:
 # truncate-lines: t
 # show-trailing-whitespace: t

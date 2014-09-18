@@ -15,8 +15,7 @@
 #include "DataFormats/TrackReco/interface/Track.h"
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
 #include "DataFormats/TrackerRecHit2D/interface/SiPixelRecHitCollection.h"
-#include "DataFormats/SiPixelDetId/interface/PXBDetId.h"
-#include "DataFormats/SiPixelDetId/interface/PXFDetId.h"
+#include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
 #include "DataFormats/TrajectorySeed/interface/TrajectorySeed.h"
 #include "DataFormats/TrajectorySeed/interface/TrajectorySeedCollection.h"
 
@@ -169,6 +168,11 @@ void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
   ESHandle<MagneticField> magneticField;
   iSetup.get<IdealMagneticFieldRecord>().get(magneticField);
 
+  // Retrieve tracker topology from geometry
+  ESHandle<TrackerTopology> tTopoHandle;
+  iSetup.get<IdealGeometryRecord>().get(tTopoHandle);
+  const TrackerTopology* const tTopo = tTopoHandle.product();
+
   Handle<TrackCollection> tracks;
   iEvent.getByToken(tracks_token_, tracks);
 
@@ -180,12 +184,10 @@ void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
   iEvent.getByToken(initialStepSeeds_token_, initialStepSeeds);
 #endif
 
-#ifdef USE_TRAJ
   Handle<TrajTrackAssociationCollection> trajTrackAssociation;
   iEvent.getByToken(trajTrackAssociation_token_, trajTrackAssociation);
 
   auto tji = trajTrackAssociation->begin();
-#endif
 
   reco::Track const& trk1 = *tracks->begin();
   bool do_two_tracks_min_distance = true;
@@ -214,8 +216,8 @@ void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
                        trk1, trk2, magneticField.product()) << std::endl;
     }
 
-    // auto --> edm::RefToBase<TrajectorySeed>
 #ifdef USE_SEEDS
+    // auto --> edm::RefToBase<TrajectorySeed>
     auto tkseed = itTrack.seedRef();
     if (tkseed->nHits() == 3) {
       TransientTrackingRecHit::RecHitPointer recHit =
@@ -225,7 +227,6 @@ void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
       h_seed_pt_->Fill(state.globalMomentum().perp());
     }
 #endif
-#ifdef USE_TRAJ
     Ref<std::vector<Trajectory> > traj = tji->key;
     std::vector<TrajectoryMeasurement> trajMeas = traj->measurements();
     for (auto const& measurement : traj->measurements()) {
@@ -240,7 +241,6 @@ void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
         if (err2) h_tob_xpull_->Fill(delta / sqrt(err2));
       }
     }
-#endif
   }  //  Loop over tracks (and associated trajectories)
 
 #ifdef USE_SEEDS
@@ -268,9 +268,9 @@ void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
             static_cast<int>(PixelSubdetector::PixelBarrel)) {
           h_hit_pixelbarrel_map_->Fill(ttrh->globalPosition().x(),
                                        ttrh->globalPosition().y());
-          h_hit_pixel_layers_->Fill(PXBDetId(hitId).layer());
+          h_hit_pixel_layers_->Fill(tTopo->pxbLayer(hitId));
         } else {
-          h_hit_pixel_layers_->Fill(3 + PXFDetId(hitId).disk());
+          h_hit_pixel_layers_->Fill(3 + tTopo->pxfDisk(hitId));
         }
       }
     }
