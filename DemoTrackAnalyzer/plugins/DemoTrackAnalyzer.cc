@@ -20,7 +20,6 @@
 #include "DataFormats/TrajectorySeed/interface/TrajectorySeedCollection.h"
 
 #include "TrackingTools/Records/interface/TransientRecHitRecord.h"
-#include "TrackingTools/TransientTrackingRecHit/interface/TransientTrackingRecHitBuilder.h"
 #include "TrackingTools/TrajectoryState/interface/TrajectoryStateTransform.h"
 #include "TrackingTools/PatternTools/interface/Trajectory.h"
 #include "TrackingTools/PatternTools/interface/TrajTrackAssociation.h"
@@ -56,11 +55,9 @@ class DemoTrackAnalyzer : public edm::EDAnalyzer {
   // ----------member data ---------------------------
   edm::InputTag trackTags_;  // used to select what tracks to read from
                              // configuration file
-  edm::InputTag traj_trackTags_;
   edm::InputTag genericSeedsTag_;
   edm::InputTag genericStepTracksTag_;
   edm::EDGetTokenT<reco::TrackCollection> trackCollection_token_;
-  edm::EDGetTokenT<reco::TrackCollection> traj_trackCollection_token_;
   edm::EDGetTokenT<SiPixelRecHitCollection> pixelHits_token_;
   edm::EDGetTokenT<reco::TrackCollection> genericStepTracks_token_;
   edm::EDGetTokenT<TrajectorySeedCollection> genericSeeds_token_;
@@ -77,8 +74,6 @@ class DemoTrackAnalyzer : public edm::EDAnalyzer {
   TH1F* h_tob_xpull_;
   TH2F* h_hit_map_;
   TH2F* h_hit_pixelbarrel_map_;
-  std::string builder_name_;
-  const TransientTrackingRecHitBuilder* builder_;
   bool do_rereco_;
 };
 
@@ -95,10 +90,8 @@ class DemoTrackAnalyzer : public edm::EDAnalyzer {
 //
 DemoTrackAnalyzer::DemoTrackAnalyzer(const edm::ParameterSet& iConfig)
     : trackTags_(iConfig.getUntrackedParameter<edm::InputTag>("tracks")),
-      traj_trackTags_(iConfig.getUntrackedParameter<edm::InputTag>("traj_tracks")),
       genericSeedsTag_(iConfig.getUntrackedParameter<edm::InputTag>("seed")),
       genericStepTracksTag_(iConfig.getUntrackedParameter<edm::InputTag>("tracks_for_seed")),
-      builder_name_(iConfig.getParameter<std::string>("TTRHBuilder")),
       do_rereco_(iConfig.getUntrackedParameter<bool>("do_rereco")) {
   edm::Service<TFileService> fs;
   h_charge_ = fs->make<TH1F>("charge", "Charges", 200, -2., 2.);
@@ -129,7 +122,7 @@ DemoTrackAnalyzer::DemoTrackAnalyzer(const edm::ParameterSet& iConfig)
   pixelHits_token_ =
       consumes<SiPixelRecHitCollection>(InputTag("siPixelRecHits"));
   trajTrackAssociation_token_ =
-      mayConsume<TrajTrackAssociationCollection>(traj_trackTags_);
+      mayConsume<TrajTrackAssociationCollection>(trackTags_);
 }
 
 DemoTrackAnalyzer::~DemoTrackAnalyzer() {
@@ -253,7 +246,7 @@ void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
       Ref<std::vector<Trajectory> > traj = tji->key;
       std::vector<TrajectoryMeasurement> trajMeas = traj->measurements();
       for (auto const& measurement : traj->measurements()) {
-        TransientTrackingRecHit::ConstRecHitPointer hit = measurement.recHit();
+        TrackingRecHit::ConstRecHitPointer hit = measurement.recHit();
         DetId hitId = hit->geographicalId();
         if (hit->isValid() &&
             hitId.subdetId() == static_cast<int>(StripSubdetector::TOB)) {
@@ -287,13 +280,11 @@ void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
   for (auto const& pixel_rechit_per_detid : *pixelHits) {
     DetId hitId = pixel_rechit_per_detid.detId();
     for (auto const& a_pixel_rechit : pixel_rechit_per_detid) {
-      TransientTrackingRecHit::RecHitPointer ttrh =
-          builder_->build(&a_pixel_rechit);
-      if (ttrh->isValid()) {
+      if (a_pixel_rechit.isValid()) {
         if (hitId.subdetId() ==
             static_cast<int>(PixelSubdetector::PixelBarrel)) {
-          h_hit_pixelbarrel_map_->Fill(ttrh->globalPosition().x(),
-                                       ttrh->globalPosition().y());
+          h_hit_pixelbarrel_map_->Fill(a_pixel_rechit.globalPosition().x(),
+                                       a_pixel_rechit.globalPosition().y());
           h_hit_pixel_layers_->Fill(tTopo->pxbLayer(hitId));
         } else {
           h_hit_pixel_layers_->Fill(3 + tTopo->pxfDisk(hitId));
@@ -315,9 +306,6 @@ void DemoTrackAnalyzer::endJob() {}
 
 void DemoTrackAnalyzer::beginRun(edm::Run const& run,
                                  edm::EventSetup const& setup) {
-  edm::ESHandle<TransientTrackingRecHitBuilder> theBuilder;
-  setup.get<TransientRecHitRecord>().get(builder_name_, theBuilder);
-  builder_ = theBuilder.product();
 }
 
 // ------------ method fills 'descriptions' with the allowed parameters for the

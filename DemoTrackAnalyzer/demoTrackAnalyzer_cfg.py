@@ -5,7 +5,7 @@ process = cms.Process("Demo")
 
 process.load("FWCore.MessageService.MessageLogger_cfi")
 
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(500) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(50) )
 
 ### conditions
 process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
@@ -56,15 +56,13 @@ process.selectedTracksPixelLessStep = cms.EDFilter("TrackSelector",
 
 process.demo = cms.EDAnalyzer('DemoTrackAnalyzer',
                               tracks = cms.untracked.InputTag('TrackRefitter'),#'TrackRefitter'
-                              traj_tracks = cms.untracked.InputTag('TrackRefitter'),#'TrackRefitter'
                               seed = cms.untracked.InputTag('pixelLessStepSeeds'),
                               tracks_for_seed = cms.untracked.InputTag('selectedTracksPixelLessStep'),
-                              TTRHBuilder = cms.string("WithAngleAndTemplate"),
                               do_rereco = cms.untracked.bool(False)
                               )
 
 process.TFileService = cms.Service("TFileService",
-                                   fileName = cms.string('trackAnalysis_PixelLessStep.root')
+                                   fileName = cms.string('trackAnalysis_PixelLessStep_small.root')
                                    )
 
 process.p = cms.Path(process.clustToHits *
@@ -76,7 +74,7 @@ process.p = cms.Path(process.clustToHits *
 ### CUSTOMIZE PROCESS
 
 # Select specific Tracks out of the passed collection
-#process = customizeSelectHPTracks(process, 'generalTracks')
+# process = customizeSelectHPTracks(process, 'TrackRefitter')
 
 # Re-run **FULL** tracking
 process = customizeForSeeds(process)
