@@ -1,4 +1,5 @@
 import FWCore.ParameterSet.Config as cms
+from TTD.DemoTrackAnalyzer.demo_customizations import *
 
 process = cms.Process("Demo")
 
@@ -43,65 +44,47 @@ process.load("RecoTracker.MeasurementDet.MeasurementTrackerEventProducer_cfi")
 ### Track Refitter
 process.load("RecoTracker.TrackProducer.TrackRefitters_cff")
 
+process.selectedTracksInitialStep = cms.EDFilter("TrackSelector",
+                                                 src = cms.InputTag("generalTracks"),
+                                                 cut = cms.string("quality('highPurity') & (algo = 4)")
+                                                 )
+
+process.selectedTracksPixelLessStep = cms.EDFilter("TrackSelector",
+                                                 src = cms.InputTag("generalTracks"),
+                                                 cut = cms.string("quality('highPurity') & (algo = 9)")
+                                                 )
+
 process.demo = cms.EDAnalyzer('DemoTrackAnalyzer',
                               tracks = cms.untracked.InputTag('TrackRefitter'),#'TrackRefitter'
-                              TTRHBuilder = cms.string("WithAngleAndTemplate")
+                              traj_tracks = cms.untracked.InputTag('TrackRefitter'),#'TrackRefitter'
+                              seed = cms.untracked.InputTag('pixelLessStepSeeds'),
+                              tracks_for_seed = cms.untracked.InputTag('selectedTracksPixelLessStep'),
+                              TTRHBuilder = cms.string("WithAngleAndTemplate"),
+                              do_rereco = cms.untracked.bool(False)
                               )
 
 process.TFileService = cms.Service("TFileService",
-                                   fileName = cms.string('histo.root')
+                                   fileName = cms.string('trackAnalysis_PixelLessStep.root')
                                    )
 
 process.p = cms.Path(process.clustToHits *
                      process.MeasurementTrackerEvent *
                      process.TrackRefitter *
-                     #                     process.trackingGlobalReco *
+                     process.selectedTracksPixelLessStep *
                      process.demo)
-
-process.MessageLogger.categories.extend(["GetManyWithoutRegistration","GetByLabelWithoutRegistration"])
-_messageSettings = cms.untracked.PSet(
-    reportEvery = cms.untracked.int32(1),
-    optionalPSet = cms.untracked.bool(True),
-    limit = cms.untracked.int32(10000000)
-    )
-
-process.MessageLogger.cerr.GetManyWithoutRegistration = _messageSettings
-process.MessageLogger.cerr.GetByLabelWithoutRegistration = _messageSettings
-
-def customizeSelectHPTracks(process):
-    process.selectedTracks = cms.EDFilter("TrackSelector",
-                                          src = cms.InputTag("TrackRefitter"),
-                                          cut = cms.string("quality('highPurity') & (algo = 4) & abs(eta) < 0.9")
-                                          )
-    process.demo.tracks = cms.untracked.InputTag("selectedTracks")
-    # Now run the filter that produces the input collection for our
-    # demo analyzer before the demo itself.
-    process.p.insert(process.p.index(process.demo), process.selectedTracks)
-    return process
-
-def customizeForSeeds(process):
-    if not process.p.replace(process.TrackRefitter, process.trackingGlobalReco):
-        raise Exception("Cannot customize process to run full reco instead of refit.")
-    # Add also siPixelClusterShapeCache that is needed by the full tracking.
-    process.load("RecoPixelVertexing.PixelLowPtUtilities.siPixelClusterShapeCache_cfi")
-    process.p.insert(process.p.index(process.trackingGlobalReco), process.siPixelClusterShapeCache)
-
-    # Check if we have been called after the customizeSelectHPTracks
-    # has been called: if so, change the input collection of the
-    # filter, otherwise change the input collection of the
-    # DemoTrackAnalyzer module directly.
-    if getattr(process, "selectedTracks", None):
-        process.selectedTracks.src = cms.untracked.InputTag("generalTracks")
-    else:
-        process.demo.tracks = cms.untracked.InputTag("generalTracks")
-
-    return process
 
 ### CUSTOMIZE PROCESS
 
-#process = customizeSelectHPTracks(process)
+# Select specific Tracks out of the passed collection
+#process = customizeSelectHPTracks(process, 'generalTracks')
+
+# Re-run **FULL** tracking
 process = customizeForSeeds(process)
 
+# Enable MessageLogger for specific LogDebug messages in various
+# tracking modules (require local installation&compilation of those
+# modules with -DEDM_ML_DEBUG set.)
+#process = customizeMessageLogger(process)
 
 # Local Variables:
 # truncate-lines: t
