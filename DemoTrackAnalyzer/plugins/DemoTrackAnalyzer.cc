@@ -244,7 +244,6 @@ void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
 
       // Access to Trajectory: pull distribution for TOB
       Ref<std::vector<Trajectory> > traj = tji->key;
-      std::vector<TrajectoryMeasurement> trajMeas = traj->measurements();
       for (auto const& measurement : traj->measurements()) {
         TrackingRecHit::ConstRecHitPointer hit = measurement.recHit();
         DetId hitId = hit->geographicalId();
