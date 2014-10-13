@@ -44,40 +44,23 @@ process.load("RecoTracker.MeasurementDet.MeasurementTrackerEventProducer_cfi")
 ### Track Refitter
 process.load("RecoTracker.TrackProducer.TrackRefitters_cff")
 
-process.selectedTracksInitialStep = cms.EDFilter("TrackSelector",
-                                                 src = cms.InputTag("generalTracks"),
-                                                 cut = cms.string("quality('highPurity') & (algo = 4)")
-                                                 )
-
-process.selectedTracksPixelLessStep = cms.EDFilter("TrackSelector",
-                                                 src = cms.InputTag("generalTracks"),
-                                                 cut = cms.string("quality('highPurity') & (algo = 9)")
-                                                 )
-
 process.demo = cms.EDAnalyzer('DemoTrackAnalyzer',
-                              tracks = cms.untracked.InputTag('TrackRefitter'),#'TrackRefitter'
-                              seed = cms.untracked.InputTag('pixelLessStepSeeds'),
-                              tracks_for_seed = cms.untracked.InputTag('selectedTracksPixelLessStep'),
-                              do_rereco = cms.untracked.bool(False)
+                              tracks = cms.untracked.InputTag('TrackRefitter')#'TrackRefitter'
                               )
 
 process.TFileService = cms.Service("TFileService",
-                                   fileName = cms.string('trackAnalysis_PixelLessStep_small.root')
+                                   fileName = cms.string('trackAnalysis.root')
                                    )
 
 process.p = cms.Path(process.clustToHits *
                      process.MeasurementTrackerEvent *
                      process.TrackRefitter *
-                     process.selectedTracksPixelLessStep *
                      process.demo)
 
 ### CUSTOMIZE PROCESS
 
 # Select specific Tracks out of the passed collection
 # process = customizeSelectHPTracks(process, 'TrackRefitter')
-
-# Re-run **FULL** tracking
-process = customizeForSeeds(process)
 
 # Enable MessageLogger for specific LogDebug messages in various
 # tracking modules (require local installation&compilation of those

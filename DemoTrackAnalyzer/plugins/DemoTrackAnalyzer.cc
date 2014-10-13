@@ -16,13 +16,8 @@
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
 #include "DataFormats/TrackerRecHit2D/interface/SiPixelRecHitCollection.h"
 #include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
-#include "DataFormats/TrajectorySeed/interface/TrajectorySeed.h"
-#include "DataFormats/TrajectorySeed/interface/TrajectorySeedCollection.h"
 
-#include "TrackingTools/Records/interface/TransientRecHitRecord.h"
-#include "TrackingTools/TrajectoryState/interface/TrajectoryStateTransform.h"
-#include "TrackingTools/PatternTools/interface/Trajectory.h"
-#include "TrackingTools/PatternTools/interface/TrajTrackAssociation.h"
+#include "Geometry/Records/interface/IdealGeometryRecord.h"
 #include "TrackingTools/PatternTools/interface/TwoTrackMinimumDistance.h"
 
 #include "MagneticField/Engine/interface/MagneticField.h"
@@ -55,26 +50,16 @@ class DemoTrackAnalyzer : public edm::EDAnalyzer {
   // ----------member data ---------------------------
   edm::InputTag trackTags_;  // used to select what tracks to read from
                              // configuration file
-  edm::InputTag genericSeedsTag_;
-  edm::InputTag genericStepTracksTag_;
   edm::EDGetTokenT<reco::TrackCollection> trackCollection_token_;
   edm::EDGetTokenT<SiPixelRecHitCollection> pixelHits_token_;
-  edm::EDGetTokenT<reco::TrackCollection> genericStepTracks_token_;
-  edm::EDGetTokenT<TrajectorySeedCollection> genericSeeds_token_;
-  edm::EDGetTokenT<TrajTrackAssociationCollection> trajTrackAssociation_token_;
 
   TH1I* h_crossed_;
   TH1I* h_missed_;
   TH1I* h_hit_pixel_layers_;
   TH1F* h_charge_;
   TH1F* h_track_pt_;
-  TH1F* h_seed_pt_;
-  TH1F* h_eta_genericstep_seeds_;
-  TH1F* h_eta_genericstep_hp_;
-  TH1F* h_tob_xpull_;
   TH2F* h_hit_map_;
   TH2F* h_hit_pixelbarrel_map_;
-  bool do_rereco_;
 };
 
 //
@@ -89,14 +74,10 @@ class DemoTrackAnalyzer : public edm::EDAnalyzer {
 // constructors and destructor
 //
 DemoTrackAnalyzer::DemoTrackAnalyzer(const edm::ParameterSet& iConfig)
-    : trackTags_(iConfig.getUntrackedParameter<edm::InputTag>("tracks")),
-      genericSeedsTag_(iConfig.getUntrackedParameter<edm::InputTag>("seed")),
-      genericStepTracksTag_(iConfig.getUntrackedParameter<edm::InputTag>("tracks_for_seed")),
-      do_rereco_(iConfig.getUntrackedParameter<bool>("do_rereco")) {
+    : trackTags_(iConfig.getUntrackedParameter<edm::InputTag>("tracks")) {
   edm::Service<TFileService> fs;
   h_charge_ = fs->make<TH1F>("charge", "Charges", 200, -2., 2.);
   h_track_pt_ = fs->make<TH1F>("Track_Pt", "Track_Pt", 200, 0., 100.);
-  h_seed_pt_ = fs->make<TH1F>("Seed_Pt", "Seed_Pt", 200, 0., 100.);
   h_crossed_ = fs->make<TH1I>("CrossedLayers", "CrossedLayers", 50, 0., 50.);
   h_missed_ = fs->make<TH1I>("MissedLayers", "MissedLayers", 50, 0., 50.);
   h_hit_map_ =
@@ -105,24 +86,14 @@ DemoTrackAnalyzer::DemoTrackAnalyzer(const edm::ParameterSet& iConfig)
                                           240, -12., 12., 240, -12., 12.);
   h_hit_pixel_layers_ =
       fs->make<TH1I>("Hits_pixellayers", "Hits_pixellayers", 5, 1, 6);
-  h_eta_genericstep_seeds_ =
-      fs->make<TH1F>("GenericSeed_Eta", "GenericSeed_Eta", 100, -2.5, 2.5);
-  h_eta_genericstep_hp_ =
-      fs->make<TH1F>("GenericHP_Eta", "GenericHP_Eta", 100, -2.5, 2.5);
-  h_tob_xpull_ = fs->make<TH1F>("TOB_Pull_x", "TOB_Pull_x", 100, -5., 5.);
 
   // Declare what we need to consume.
   using edm::InputTag;
   using reco::TrackCollection;
 
   trackCollection_token_ = consumes<TrackCollection>(trackTags_);
-  genericStepTracks_token_ = mayConsume<TrackCollection>(genericStepTracksTag_);
-  genericSeeds_token_ =
-      mayConsume<TrajectorySeedCollection>(genericSeedsTag_);
   pixelHits_token_ =
       consumes<SiPixelRecHitCollection>(InputTag("siPixelRecHits"));
-  trajTrackAssociation_token_ =
-      mayConsume<TrajTrackAssociationCollection>(trackTags_);
 }
 
 DemoTrackAnalyzer::~DemoTrackAnalyzer() {
@@ -184,20 +155,9 @@ void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
   Handle<SiPixelRecHitCollection> pixelHits;
   iEvent.getByToken(pixelHits_token_, pixelHits);
 
-  Handle<TrajectorySeedCollection> genericSeeds;
-  Handle<TrackCollection> genericStepTracks;
-  Handle<TrajTrackAssociationCollection> trajTrackAssociation;
   // Do not attempt to get collection from the event unless we know
   // they are there since we are running the full reconstruction
   // sequence
-  TrajTrackAssociationCollection::const_iterator tji;
-  if (do_rereco_) {
-    iEvent.getByToken(genericSeeds_token_, genericSeeds);
-    iEvent.getByToken(genericStepTracks_token_, genericStepTracks);
-    iEvent.getByToken(trajTrackAssociation_token_, trajTrackAssociation);
-    tji = trajTrackAssociation->begin();
-  }
-
   reco::Track const& trk1 = *tracks->begin();
   bool do_two_tracks_min_distance = true;
   // auto --> "reco::Track"
@@ -228,52 +188,7 @@ void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
                 << computeMinimumTrackDistance(
                        trk1, trk2, magneticField.product()) << std::endl;
     }
-
-    if (do_rereco_) {
-      // Access to seeds
-      // auto --> edm::RefToBase<TrajectorySeed>
-      auto tkseed = itTrack.seedRef();
-      // To pick-up the last hit on the seed you can either use
-      // seed->recHits().first + (num_rechits_in_seed - 1) or use
-      // seed->recHits().second - 1.
-      TrajectoryStateOnSurface state = trajectoryStateTransform::transientState(
-          tkseed->startingState(),
-          (tkseed->recHits().second - 1)->surface(),
-          magneticField.product());
-      h_seed_pt_->Fill(state.globalMomentum().perp());
-
-      // Access to Trajectory: pull distribution for TOB
-      Ref<std::vector<Trajectory> > traj = tji->key;
-      for (auto const& measurement : traj->measurements()) {
-        TrackingRecHit::ConstRecHitPointer hit = measurement.recHit();
-        DetId hitId = hit->geographicalId();
-        if (hit->isValid() &&
-            hitId.subdetId() == static_cast<int>(StripSubdetector::TOB)) {
-          TrajectoryStateOnSurface fwdState = measurement.forwardPredictedState();
-          float delta = hit->localPosition().x() - fwdState.localPosition().x();
-          float err2 = hit->localPositionError().xx() +
-              fwdState.localError().positionError().xx();
-          if (err2) h_tob_xpull_->Fill(delta / sqrt(err2));
-        }
-      }  // End Loop over trajectory measurements
-      // Increment the TrajectoryTrackAssociation to be in sync w.r.t
-      // the main track collection
-      ++tji;
-    }  // Endif do_rereco_
   }  //  End loop over tracks (and associated trajectories)
-
-  if (do_rereco_) {
-    for (auto const& a_seed : *genericSeeds) {
-      TrajectoryStateOnSurface state = trajectoryStateTransform::transientState(
-          a_seed.startingState(), (a_seed.recHits().second - 1)->surface(),
-          magneticField.product());
-      h_eta_genericstep_seeds_->Fill(state.globalMomentum().eta());
-    }
-    for (auto const & a_track : *genericStepTracks) {
-      h_eta_genericstep_hp_->Fill(a_track.eta());
-    }
-  }
-
   // Access to hit information: loop over all pixel hits
   // auto --> edmNew::DetSetVector<SiPixelRecHit>
   for (auto const& pixel_rechit_per_detid : *pixelHits) {
