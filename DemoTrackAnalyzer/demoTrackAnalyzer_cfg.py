@@ -51,7 +51,7 @@ process.selectedTracksInitialStep = cms.EDFilter("TrackSelector",
 
 process.demo = cms.EDAnalyzer('DemoTrackAnalyzer',
                               tracks = cms.untracked.InputTag('TrackRefitter'),#'TrackRefitter'
-                              seed = cms.untracked.InputTag('pixelLessStepSeeds'),
+                              seed = cms.untracked.InputTag('initialStepSeeds'),
                               do_rereco = cms.untracked.bool(False)
                               )
 
