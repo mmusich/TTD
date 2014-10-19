@@ -74,11 +74,11 @@ process.o = cms.EndPath(process.out)
 process.schedule = cms.Schedule(process.p,
                                 process.o)
 
-### debug time and memory information (more at Validation/Performance/python//TimeMemory*.py)
+### debug time and memory information (more at Validation/Performance/python/TimeMemory*.py)
 process.options = cms.untracked.PSet(wantSummary = cms.untracked.bool(True))
-process.SimpleMemoryCheck=cms.Service("SimpleMemoryCheck",
-                                      ignoreTotal=cms.untracked.int32(1),
-                                      oncePerEventMode=cms.untracked.bool(False))
+# process.SimpleMemoryCheck=cms.Service("SimpleMemoryCheck",
+#                                       ignoreTotal=cms.untracked.int32(1),
+#                                       oncePerEventMode=cms.untracked.bool(False))
 
 ### CUSTOMIZATION FUNCTIONS TO BE USED ###
 
