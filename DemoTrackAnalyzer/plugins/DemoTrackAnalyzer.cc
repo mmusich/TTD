@@ -196,7 +196,3 @@ void DemoTrackAnalyzer::fillDescriptions(
 // define this as a plug-in
 DEFINE_FWK_MODULE(DemoTrackAnalyzer);
 
-// Local Variables:
-// truncate-lines: t
-// show-trailing-whitespace: t
-// End:
