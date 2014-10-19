@@ -91,10 +91,3 @@ def customize_initialStepSeeds(process):
 ### INVOKE APPROPRIATE CUSTOMIZATION FUNCTION(S) ###
 
 # process = customize_initialStepSeeds(process)
-
-
-
-# Local Variables:
-# truncate-lines: t
-# show-trailing-whitespace: t
-# End:
