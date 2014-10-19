@@ -62,10 +62,3 @@ def customize_UseAnalyticalPropagator(process):
 
 
 
-# Local Variables:
-# truncate-lines: t
-# show-trailing-whitespace: t
-# End:
-
-
-
