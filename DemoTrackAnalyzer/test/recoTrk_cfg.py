@@ -1,6 +1,10 @@
 import FWCore.ParameterSet.Config as cms
 
-process = cms.Process("RERECO")
+from Configuration.Eras.Era_Run3_cff import Run3
+process = cms.Process("ReReco", Run3)
+
+#from Configuration.Eras.Era_Run3_noMkFit_cff import Run3_noMkFit
+#process = cms.Process("ReReco", Run3_noMkFit)
 
 ### standard MessageLoggerConfiguration
 process.load("FWCore.MessageService.MessageLogger_cfi")
@@ -8,10 +12,11 @@ process.load("FWCore.MessageService.MessageLogger_cfi")
 ### source
 process.source = cms.Source("PoolSource",
     fileNames = cms.untracked.vstring(
-    '/store/relval/CMSSW_7_2_0_pre3/RelValTTbar_13/GEN-SIM-RECO/PU25ns_POSTLS172_V3_CondDBv2-v1/00000/7E6493F0-5F21-E411-90CD-0025905A613C.root',
-    '/store/relval/CMSSW_7_2_0_pre3/RelValTTbar_13/GEN-SIM-RECO/PU25ns_POSTLS172_V3_CondDBv2-v1/00000/A22ECB6B-5F21-E411-9968-0025905B8576.root',
-    '/store/relval/CMSSW_7_2_0_pre3/RelValTTbar_13/GEN-SIM-RECO/PU25ns_POSTLS172_V3_CondDBv2-v1/00000/C0FABB8A-B021-E411-80D0-0025905B85A2.root',
-    '/store/relval/CMSSW_7_2_0_pre3/RelValTTbar_13/GEN-SIM-RECO/PU25ns_POSTLS172_V3_CondDBv2-v1/00000/EE538882-B021-E411-B970-0025905B85AE.root'
+        '/store/relval/CMSSW_13_0_0_pre4/RelValTTbar_14TeV/GEN-SIM-RECO/PU_130X_mcRun3_2022_realistic_v2-v1/00000/0e8ae23c-7729-4ba7-b3fd-91d3183893d3.root'
+        #'/store/relval/CMSSW_7_2_0_pre3/RelValTTbar_13/GEN-SIM-RECO/PU25ns_POSTLS172_V3_CondDBv2-v1/00000/7E6493F0-5F21-E411-90CD-0025905A613C.root',
+        #'/store/relval/CMSSW_7_2_0_pre3/RelValTTbar_13/GEN-SIM-RECO/PU25ns_POSTLS172_V3_CondDBv2-v1/00000/A22ECB6B-5F21-E411-9968-0025905B8576.root',
+        #'/store/relval/CMSSW_7_2_0_pre3/RelValTTbar_13/GEN-SIM-RECO/PU25ns_POSTLS172_V3_CondDBv2-v1/00000/C0FABB8A-B021-E411-80D0-0025905B85A2.root',
+        #'/store/relval/CMSSW_7_2_0_pre3/RelValTTbar_13/GEN-SIM-RECO/PU25ns_POSTLS172_V3_CondDBv2-v1/00000/EE538882-B021-E411-B970-0025905B85AE.root'
     )
 )
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(100) )
@@ -22,11 +27,11 @@ process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
 #process.GlobalTag.globaltag = 'POSTLS172_V4::All'
 # or get it automatically
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:run2_mc', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '130X_mcRun3_2022_realistic_v2', '')
 
 ### standard includes (can't live without)
 process.load('Configuration.StandardSequences.Services_cff')
-process.load('Configuration.StandardSequences.Geometry_cff')
+process.load('Configuration.StandardSequences.GeometryRecoDB_cff')
 process.load("Configuration.StandardSequences.RawToDigi_cff")
 process.load("Configuration.EventContent.EventContent_cff")
 process.load("Configuration.StandardSequences.Reconstruction_cff")
@@ -38,6 +43,34 @@ process.clustToHits = cms.Sequence(
     process.siPixelRecHits*process.siStripMatchedRecHits
 )
 
+noTrackingAndDependent = list()
+noTrackingAndDependent.append(process.siPixelClustersPreSplitting)
+noTrackingAndDependent.append(process.siStripZeroSuppression)
+noTrackingAndDependent.append(process.siStripClusters)
+noTrackingAndDependent.append(process.initialStepSeedLayersPreSplitting)
+noTrackingAndDependent.append(process.trackerClusterCheckPreSplitting)
+noTrackingAndDependent.append(process.initialStepTrackingRegionsPreSplitting)
+noTrackingAndDependent.append(process.initialStepHitDoubletsPreSplitting)
+noTrackingAndDependent.append(process.initialStepHitTripletsPreSplitting)
+noTrackingAndDependent.append(process.initialStepSeedsPreSplitting)
+noTrackingAndDependent.append(process.initialStepTrackCandidatesPreSplitting)
+noTrackingAndDependent.append(process.initialStepTracksPreSplitting)
+noTrackingAndDependent.append(process.firstStepPrimaryVerticesPreSplitting)
+noTrackingAndDependent.append(process.initialStepTrackRefsForJetsPreSplitting)
+noTrackingAndDependent.append(process.caloTowerForTrkPreSplitting)
+noTrackingAndDependent.append(process.ak4CaloJetsForTrkPreSplitting)
+noTrackingAndDependent.append(process.jetsForCoreTrackingPreSplitting)
+noTrackingAndDependent.append(process.siPixelClusterShapeCachePreSplitting)
+noTrackingAndDependent.append(process.siPixelClusters)
+noTrackingAndDependent.append(process.clusterSummaryProducer)
+noTrackingAndDependent.append(process.siPixelRecHitsPreSplitting)
+noTrackingAndDependent.append(process.MeasurementTrackerEventPreSplitting)
+noTrackingAndDependent.append(process.PixelLayerTriplets)
+noTrackingAndDependent.append(process.pixelTracks)
+noTrackingAndDependent.append(process.pixelVertices)
+
+process.tracking_fromRECO = process.trackingGlobalReco.copyAndExclude(noTrackingAndDependent)
+
 # This is needed for tracking to work properly
 process.load("RecoTracker.MeasurementDet.MeasurementTrackerEventProducer_cfi")
 process.load("RecoPixelVertexing.PixelLowPtUtilities.siPixelClusterShapeCache_cfi")
@@ -45,7 +78,8 @@ process.load("RecoPixelVertexing.PixelLowPtUtilities.siPixelClusterShapeCache_cf
 process.tracking = cms.Sequence(
     process.MeasurementTrackerEvent
     + process.siPixelClusterShapeCache
-    + process.trackingGlobalReco
+    #+ process.trackingGlobalReco
+    + process.tracking_fromRECO
 )
 
 
