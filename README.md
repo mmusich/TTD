@@ -1,14 +1,14 @@
-TTD
+Tracker Training Days
 ===
 
-Tracking Training Day
+Tracker Training Days
 
 ## Setup
 
 1. Setup a proper CMSSW release area and source its environments
 ```
-cmsrel CMSSW_7_2_0_pre5
-cd CMSSW_7_2_0_pre5
+cmsrel CMSSW_13_0_0_pre4
+cd CMSSW_13_0_0_pre4
 eval `scram r -sh`
 ```
 
@@ -27,5 +27,5 @@ git cms-init
 
 1. Add code for the Tracking Training Day, 2nd edition
 ```
-git submodule add git@github.com:/rovere/TTD TTD
+git submodule add git@github.com:/mmusich/TTD TTD2
 ```
