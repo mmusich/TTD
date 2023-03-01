@@ -3,7 +3,7 @@
 
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/EDAnalyzer.h"
+#include "FWCore/Framework/interface/one/EDAnalyzer.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "FWCore/Framework/interface/Event.h"
@@ -36,7 +36,7 @@
 // class declaration
 //
 
-class DemoTrackAnalyzer : public edm::EDAnalyzer {
+class DemoTrackAnalyzer : public edm::one::EDAnalyzer<> {
  public:
   explicit DemoTrackAnalyzer(const edm::ParameterSet&);
   ~DemoTrackAnalyzer();
@@ -46,13 +46,12 @@ class DemoTrackAnalyzer : public edm::EDAnalyzer {
  private:
   float computeMinimumTrackDistance(reco::Track const&, reco::Track const&,
                                     const MagneticField*);
-  virtual void beginJob() override;
   virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
-  virtual void endJob() override;
-
-  virtual void beginRun(edm::Run const&, edm::EventSetup const&) override;
 
   // ----------member data ---------------------------
+  const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> magFieldToken_;
+  const edm::ESGetToken<TrackerTopology, TrackerTopologyRcd> trackerTopologyToken_;
+
   edm::InputTag trackTags_;  // used to select what tracks to read from
                              // configuration file
   edm::InputTag genericSeedsTag_;
@@ -89,10 +88,12 @@ class DemoTrackAnalyzer : public edm::EDAnalyzer {
 // constructors and destructor
 //
 DemoTrackAnalyzer::DemoTrackAnalyzer(const edm::ParameterSet& iConfig)
-    : trackTags_(iConfig.getUntrackedParameter<edm::InputTag>("tracks")),
-      genericSeedsTag_(iConfig.getUntrackedParameter<edm::InputTag>("seed")),
-      genericStepTracksTag_(iConfig.getUntrackedParameter<edm::InputTag>("tracks_for_seed")),
-      do_rereco_(iConfig.getUntrackedParameter<bool>("do_rereco")) {
+  : magFieldToken_(esConsumes()),
+    trackerTopologyToken_(esConsumes()),
+    trackTags_(iConfig.getUntrackedParameter<edm::InputTag>("tracks")),
+    genericSeedsTag_(iConfig.getUntrackedParameter<edm::InputTag>("seed")),
+    genericStepTracksTag_(iConfig.getUntrackedParameter<edm::InputTag>("tracks_for_seed")),
+    do_rereco_(iConfig.getUntrackedParameter<bool>("do_rereco")) {
   edm::Service<TFileService> fs;
   h_charge_ = fs->make<TH1F>("charge", "Charges", 200, -2., 2.);
   h_track_pt_ = fs->make<TH1F>("Track_Pt", "Track_Pt", 200, 0., 100.);
@@ -170,13 +171,10 @@ void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
   using edm::Ref;
   using reco::TrackCollection;
 
-  ESHandle<MagneticField> magneticField;
-  iSetup.get<IdealMagneticFieldRecord>().get(magneticField);
+  ESHandle<MagneticField> magneticField = iSetup.getHandle(magFieldToken_);
 
   // Retrieve tracker topology from geometry
-  ESHandle<TrackerTopology> tTopoHandle;
-  iSetup.get<IdealGeometryRecord>().get(tTopoHandle);
-  const TrackerTopology* const tTopo = tTopoHandle.product();
+  const TrackerTopology* const tTopo = &iSetup.getData(trackerTopologyToken_);
 
   Handle<TrackCollection> tracks;
   iEvent.getByToken(trackCollection_token_, tracks);
@@ -209,7 +207,7 @@ void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
     // hit pattern of the track
     const reco::HitPattern& p = itTrack.hitPattern();
     h_crossed_->Fill(p.trackerLayersWithMeasurement());
-    h_missed_->Fill(p.numberOfHits(reco::HitPattern::MISSING_OUTER_HITS));
+    h_missed_->Fill(p.numberOfAllHits(reco::HitPattern::MISSING_OUTER_HITS));
 
     // Access to hit information
     auto bi = itTrack.recHitsBegin();
@@ -238,7 +236,7 @@ void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
       // seed->recHits().second - 1.
       TrajectoryStateOnSurface state = trajectoryStateTransform::transientState(
           tkseed->startingState(),
-          (tkseed->recHits().second - 1)->surface(),
+          (tkseed->recHits().end() - 1)->surface(),
           magneticField.product());
       h_seed_pt_->Fill(state.globalMomentum().perp());
 
@@ -265,7 +263,7 @@ void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
   if (do_rereco_) {
     for (auto const& a_seed : *genericSeeds) {
       TrajectoryStateOnSurface state = trajectoryStateTransform::transientState(
-          a_seed.startingState(), (a_seed.recHits().second - 1)->surface(),
+										a_seed.startingState(), (a_seed.recHits().end() - 1)->surface(),
           magneticField.product());
       h_eta_genericstep_seeds_->Fill(state.globalMomentum().eta());
     }
@@ -291,20 +289,6 @@ void DemoTrackAnalyzer::analyze(const edm::Event& iEvent,
       }
     }
   }
-}
-
-// ------------ method called once each job just before starting event loop
-// ------------
-void DemoTrackAnalyzer::beginJob() {}
-
-// ------------ method called once each job just after ending the event loop
-// ------------
-void DemoTrackAnalyzer::endJob() {}
-
-// ------------ method called when starting to processes a run  ------------
-
-void DemoTrackAnalyzer::beginRun(edm::Run const& run,
-                                 edm::EventSetup const& setup) {
 }
 
 // ------------ method fills 'descriptions' with the allowed parameters for the
